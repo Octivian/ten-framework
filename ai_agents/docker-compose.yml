@@ -12,6 +12,7 @@ services:
       - 8000-9001:8000-9001
     volumes:
       - ./:/app
+      - ../ten_ai_base:/ten_ai_base
       - ${LOG_PATH}:${LOG_PATH}
       - ../.vscode/:/app/.vscode
       - ../tools/pylint/.pylintrc:/tools/pylint/.pylintrc

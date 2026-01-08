@@ -25,7 +25,25 @@ export async function POST(request: NextRequest) {
       language,
       voice_type,
       properties,
+      prompt_params,  // 简化的顶级参数，用于模板渲染
     } = body;
+
+    // Build properties object
+    let finalProperties = properties || {};
+
+    // If prompt_params is provided, inject into v2v.prompt_params for template rendering
+    if (prompt_params && Object.keys(prompt_params).length > 0) {
+      finalProperties = {
+        ...finalProperties,
+        v2v: {
+          ...(finalProperties.v2v || {}),
+          prompt_params: prompt_params,
+        },
+      };
+    }
+
+    console.log("[route.tsx] prompt_params:", JSON.stringify(prompt_params));
+    console.log("[route.tsx] finalProperties:", JSON.stringify(finalProperties));
 
     // Send a POST request to start the agent
     const response = await axios.post(`${AGENT_SERVER_URL}/start`, {
@@ -34,7 +52,7 @@ export async function POST(request: NextRequest) {
       user_uid,
       graph_name,
       // Get the graph properties based on the graph name, language, and voice type
-      properties: properties,
+      properties: Object.keys(finalProperties).length > 0 ? finalProperties : undefined,
     });
 
     const responseData = response.data;

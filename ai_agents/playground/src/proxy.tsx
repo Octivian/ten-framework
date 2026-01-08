@@ -17,7 +17,11 @@ export async function proxy(req: NextRequest) {
   const url = req.nextUrl.clone();
 
   if (pathname.startsWith(`/api/agents/`)) {
-    // if (!pathname.startsWith('/api/agents/start')) {
+    // Let /api/agents/start go through route.tsx for prompt_params processing
+    if (pathname === "/api/agents/start") {
+      return NextResponse.next();
+    }
+
     // Proxy all other agents API requests
     url.href = `${AGENT_SERVER_URL}${pathname.replace("/api/agents/", "/")}`;
 
@@ -30,9 +34,6 @@ export async function proxy(req: NextRequest) {
 
     // console.log(`Rewriting request to ${url.href}`);
     return NextResponse.rewrite(url);
-    // } else {
-    //     return NextResponse.next();
-    // }
   } else if (pathname.startsWith(`/api/vector/`)) {
     // Proxy all other documents requests
     url.href = `${AGENT_SERVER_URL}${pathname.replace("/api/vector/", "/vector/")}`;

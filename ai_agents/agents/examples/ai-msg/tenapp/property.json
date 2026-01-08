@@ -1,0 +1,177 @@
+{
+  "ten": {
+    "predefined_graphs": [
+      {
+        "name": "ai_msg",
+        "auto_start": true,
+        "graph": {
+          "nodes": [
+            {
+              "type": "extension",
+              "name": "agora_rtc",
+              "addon": "agora_rtc",
+              "extension_group": "default",
+              "property": {
+                "app_id": "${env:AGORA_APP_ID}",
+                "app_certificate": "${env:AGORA_APP_CERTIFICATE|}",
+                "channel": "agora_gn3ahu",
+                "stream_id": 1234,
+                "remote_stream_id": 137731,
+                "subscribe_audio": true,
+                "publish_audio": true,
+                "publish_data": true,
+                "enable_agora_asr": false
+              }
+            },
+            {
+              "type": "extension",
+              "name": "main_control",
+              "addon": "main_python",
+              "extension_group": "control",
+              "property": {
+                "greeting": "你好，欢迎参加今天的面试"
+              }
+            },
+            {
+              "type": "extension",
+              "name": "message_collector",
+              "addon": "message_collector2",
+              "extension_group": "transcriber",
+              "property": {}
+            },
+            {
+              "type": "extension",
+              "name": "streamid_adapter",
+              "addon": "streamid_adapter",
+              "property": {}
+            },
+            {
+              "type": "extension",
+              "name": "v2v",
+              "addon": "openai_mllm_python",
+              "property": {
+                "api_key": "${env:OPENAI_API_KEY}",
+                "temperature": 0.9,
+                "model": "gpt-realtime",
+                "max_tokens": 2048,
+                "voice": "alloy",
+                "language": "zh",
+                "vad_type": "semantic_vad",
+                "vad_eagerness": "auto",
+                "vad_threshold": 0.5,
+                "vad_prefix_padding_ms": 300,
+                "vad_silence_duration_ms": 500,
+                "prompt": "你是一个面试官，正在面试候选人{{name}}，职位是{{position}}。请用专业的语气进行面试。"
+              }
+            }
+          ],
+          "connections": [
+            {
+              "extension": "agora_rtc",
+              "audio_frame": [
+                {
+                  "name": "pcm_frame",
+                  "dest": [
+                    {
+                      "extension": "streamid_adapter"
+                    }
+                  ]
+                }
+              ],
+              "data": [],
+              "cmd": [
+                {
+                  "names": [
+                    "on_user_joined",
+                    "on_user_left"
+                  ],
+                  "dest": [
+                    {
+                      "extension": "main_control"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "extension": "streamid_adapter",
+              "audio_frame": [
+                {
+                  "name": "pcm_frame",
+                  "dest": [
+                    {
+                      "extension": "v2v"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "extension": "v2v",
+              "audio_frame": [
+                {
+                  "name": "pcm_frame",
+                  "dest": [
+                    {
+                      "extension": "agora_rtc"
+                    }
+                  ]
+                }
+              ],
+              "data": [
+                {
+                  "names": [
+                    "mllm_server_session_ready",
+                    "mllm_server_interrupted",
+                    "mllm_server_function_call",
+                    "mllm_server_input_transcript",
+                    "mllm_server_output_transcript"
+                  ],
+                  "dest": [
+                    {
+                      "extension": "main_control"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "extension": "message_collector",
+              "data": [
+                {
+                  "name": "data",
+                  "dest": [
+                    {
+                      "extension": "agora_rtc"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "log": {
+      "handlers": [
+        {
+          "matchers": [
+            {
+              "level": "info"
+            }
+          ],
+          "formatter": {
+            "type": "plain",
+            "colored": true
+          },
+          "emitter": {
+            "type": "console",
+            "config": {
+              "stream": "stdout"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

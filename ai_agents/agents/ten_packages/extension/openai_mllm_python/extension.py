@@ -76,6 +76,7 @@ class OpenAIRealtimeConfig(BaseModel):
     model: str = "gpt-4o"
     language: str = "en"
     prompt: str = ""
+    prompt_params: dict = None  # Optional params for {{placeholder}} rendering in prompt
     temperature: float = 0.5
     max_tokens: int = 1024
     voice: str = "alloy"
@@ -585,7 +586,7 @@ class OpenAIRealtime2Extension(AsyncMLLMBaseExtension):
 
         if self.available_tools:
             tools = [tool_dict(t) for t in self.available_tools]
-        prompt = self.config.prompt
+        prompt = self.get_prompt(self.config.prompt, self.config.prompt_params)
 
         if self.config.vad_type == "server_vad":
             vad_params = ServerVADUpdateParams(

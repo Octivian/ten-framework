@@ -18,6 +18,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { setAgentConnected, setMobileActiveTab } from "@/store/reducers/global";
 import { TrulienceCfgSheet } from "../Chat/ChatCfgTrulienceSetting";
+import { ConnectDialog } from "../ConnectDialog";
 
 let intervalId: NodeJS.Timeout | null = null;
 
@@ -37,6 +38,7 @@ export default function Action(props: { className?: string }) {
     (state) => state.global.mobileActiveTab
   );
   const [loading, setLoading] = React.useState(false);
+  const [showConnectDialog, setShowConnectDialog] = React.useState(false);
 
   React.useEffect(() => {
     if (channel) {
@@ -55,28 +57,46 @@ export default function Action(props: { className?: string }) {
     if (loading) {
       return;
     }
-    setLoading(true);
     if (agentConnected) {
+      // Disconnect
+      setLoading(true);
       await apiStopService(channel);
       dispatch(setAgentConnected(false));
       toast.success("Agent disconnected");
       stopPing();
+      setLoading(false);
     } else {
+      // Show connect dialog
       const selectedGraph = graphList.find(
         (graph) => graph.graph_id === selectedGraphId
       );
       if (!selectedGraph) {
         toast.error("Please select a graph first");
-        setLoading(false);
         return;
       }
+      setShowConnectDialog(true);
+    }
+  };
 
+  const handleConnect = async (promptParams: Record<string, string> | undefined) => {
+    setLoading(true);
+    const selectedGraph = graphList.find(
+      (graph) => graph.graph_id === selectedGraphId
+    );
+    if (!selectedGraph) {
+      toast.error("Please select a graph first");
+      setLoading(false);
+      return;
+    }
+
+    try {
       const res = await apiStartService({
         channel,
         userId,
         graphName: selectedGraph.name,
         language,
         voiceType,
+        promptParams,
       });
       const { code, msg } = res || {};
       if (code != 0) {
@@ -88,11 +108,14 @@ export default function Action(props: { className?: string }) {
           toast.error(`code:${code},msg:${msg}`);
         }
         setLoading(false);
-        throw new Error(msg);
+        return;
       }
       dispatch(setAgentConnected(true));
       toast.success("Agent connected");
       startPing();
+      setShowConnectDialog(false);
+    } catch (error) {
+      toast.error("Failed to connect");
     }
     setLoading(false);
   };
@@ -119,6 +142,14 @@ export default function Action(props: { className?: string }) {
 
   return (
     <>
+      {/* Connect Dialog */}
+      <ConnectDialog
+        open={showConnectDialog}
+        onOpenChange={setShowConnectDialog}
+        onConnect={handleConnect}
+        loading={loading}
+      />
+
       {/* Action Bar */}
       <div
         className={cn(

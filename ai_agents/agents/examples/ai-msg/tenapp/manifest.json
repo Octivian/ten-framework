@@ -1,0 +1,53 @@
+{
+  "type": "app",
+  "name": "ai_msg",
+  "version": "0.10.0",
+  "dependencies": [
+    {
+      "type": "system",
+      "name": "ten_runtime_go",
+      "version": "0.11"
+    },
+    {
+      "type": "extension",
+      "name": "agora_rtc",
+      "version": "=0.23.9-t1"
+    },
+    {
+      "type": "extension",
+      "name": "main_python",
+      "version": "0.1"
+    },
+    {
+      "path": "/ten_ai_base"
+    },
+    {
+      "path": "../../../ten_packages/extension/streamid_adapter"
+    },
+    {
+      "path": "../../../ten_packages/extension/azure_mllm_python"
+    },
+    {
+      "path": "../../../ten_packages/extension/gemini_mllm_python"
+    },
+    {
+      "path": "../../../ten_packages/extension/glm_mllm_python"
+    },
+    {
+      "path": "../../../ten_packages/extension/openai_mllm_python"
+    },
+    {
+      "path": "../../../ten_packages/extension/stepfun_mllm_python"
+    },
+    {
+      "path": "../../../ten_packages/extension/message_collector2"
+    },
+    {
+      "path": "../../../ten_packages/extension/weatherapi_tool_python"
+    }
+  ],
+  "scripts": {
+    "start": "scripts/start.sh",
+    "build": "scripts/install_python_deps.sh"
+  }
+}
