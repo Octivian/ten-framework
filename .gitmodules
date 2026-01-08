@@ -4,3 +4,6 @@
 [submodule "core/ten_gn"]
 	path = core/ten_gn
 	url = https://github.com/TEN-framework/ten_gn.git
+[submodule "ten_ai_base"]
+	path = ten_ai_base
+	url = git@github.com:Octivian/ten_ai_base.git
