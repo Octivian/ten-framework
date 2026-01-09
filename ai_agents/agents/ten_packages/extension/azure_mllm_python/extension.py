@@ -81,6 +81,7 @@ class AzureRealtimeConfig(BaseModel):
     api_version: str = "2025-05-01-preview"
     language: str = "en-US"
     prompt: str = ""
+    prompt_params: dict = None  # Optional params for {{placeholder}} rendering in prompt
     temperature: float = 0.5
     max_tokens: int = 1024
 
@@ -557,7 +558,9 @@ class AzureRealtime2Extension(AsyncMLLMBaseExtension):
             if self.available_tools
             else []
         )
-        prompt = self.config.prompt
+        prompt = self.get_prompt(
+            self.config.prompt, getattr(self.config, "prompt_params", None)
+        )
 
         # Default: use Azure semantic VAD for non-realtime chat models,
         # and server VAD for gpt-4o-realtime* models.

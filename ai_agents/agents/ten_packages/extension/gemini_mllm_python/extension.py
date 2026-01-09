@@ -66,6 +66,7 @@ class GeminiRealtimeConfig(BaseModel):
     model: str = "gemini-2.5-flash-native-audio-preview-09-2025"
     language: str = "en-US"
     prompt: str = ""
+    prompt_params: dict = None  # Optional params for {{placeholder}} rendering in prompt
     input_sample_rate: int = (
         16000  # 16kHz for input audio (microphone to Gemini)
     )
@@ -555,13 +556,17 @@ class GeminiRealtime2Extension(AsyncMLLMBaseExtension):
             turn_coverage="TURN_INCLUDES_ALL_INPUT"
         )
 
+        prompt = self.get_prompt(
+            self.config.prompt, getattr(self.config, "prompt_params", None)
+        )
+
         cfg = LiveConnectConfig(
             response_modalities=(
                 [Modality.AUDIO] if self.config.audio_out else [Modality.TEXT]
             ),
             media_resolution=self.config.media_resolution,
             system_instruction=Content(
-                parts=[Part(text=self.config.prompt or "")]
+                parts=[Part(text=prompt or "")]
             ),
             tools=tools,
             speech_config=SpeechConfig(

@@ -378,7 +378,8 @@ class BedrockLLMExtension(AsyncLLMBaseExtension):
 
             additional_config = {"inferenceConfig": {"topK": self.config.topK}}
 
-            system = [{"text": self.config.prompt}]
+            prompt = self.get_prompt(self.config.prompt)
+            system = [{"text": prompt}]
 
             # Make API call
             start_time = time.time()

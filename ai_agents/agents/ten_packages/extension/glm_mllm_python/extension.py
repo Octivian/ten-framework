@@ -79,6 +79,7 @@ class GLMRealtimeConfig(BaseModel):
     path: str = "/api/paas/v4/realtime"
 
     prompt: str = ""
+    prompt_params: dict = None  # Optional params for {{placeholder}} rendering in prompt
     temperature: float = 0.5
     max_tokens: int = 1024
 
@@ -534,9 +535,13 @@ class GLMRealtime2Extension(AsyncMLLMBaseExtension):
             if self.available_tools
             else []
         )
+        prompt = self.get_prompt(
+            self.config.prompt, getattr(self.config, "prompt_params", None)
+        )
+
         su = SessionUpdate(
             session=SessionUpdateParams(
-                instructions=self.config.prompt,
+                instructions=prompt,
                 input_audio_format=AudioFormats.PCM,  # GLM needs WAV input
                 output_audio_format=AudioFormats.PCM,
                 tools=tools,
