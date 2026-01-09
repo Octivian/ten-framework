@@ -35,6 +35,36 @@ Python 使用 black（默认行宽 80）；Go 使用 `gofmt`；TypeScript/JavaSc
 
 ## 记录
 当需要让任意 app 使用定制的 `ten_ai_base` 时，将该 app 的 `tenapp/manifest.json` 中 `ten_ai_base` 依赖改为路径依赖 `/ten_ai_base`（例如 `ai_agents/agents/examples/voice-assistant/tenapp/manifest.json`）。
+当前仓库中 `ten_ai_base` 是 git 子模块；在容器环境中通过 `docker-compose` 把仓库里的 `ten_ai_base` 挂载到 `/ten_ai_base`，因此路径依赖可直接生效。若 app 仍使用 `type: system, name: ten_ai_base` 的版本依赖，就不会自动使用定制版；非容器环境需调整路径或改用本地绝对路径。
+
+### 开发环境容器启动记录
+使用最新 `dev` 分支代码重启开发容器（执行于仓库根目录）：
+```bash
+git pull --rebase --autostash origin dev
+docker compose -f ai_agents/docker-compose.yml down
+docker compose -f ai_agents/docker-compose.yml up -d --build
+```
+容器名称通常为 `ten_agent_dev`，可用 `docker compose -f ai_agents/docker-compose.yml ps` 查看状态。
+
+### ai-msg 启动记录（按 README 流程）
+进入容器后执行：
+```bash
+cd /app/agents/examples/ai-msg
+task install
+task run
+```
+说明：在 amd64 容器（QEMU）环境里，`task install` 的前端依赖安装使用 bun 可能触发 `Illegal instruction`。可用以下方式绕过并启动前端：
+```bash
+cd /app/playground
+npm install
+npm run dev -- -H 0.0.0.0 -p 3000
+```
+其余服务可单独启动：
+```bash
+cd /app/agents/examples/ai-msg
+task run-gd-server   # 49483
+task run-api-server  # 8080
+```
 
 ## App / Graph / Agent 与启动逻辑
 ### 概念
