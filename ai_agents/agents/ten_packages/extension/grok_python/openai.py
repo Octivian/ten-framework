@@ -112,14 +112,15 @@ class GrokClient:
         self.client.session = self.session
 
     async def get_chat_completions(
-        self, messages, tools=None
+        self, messages, tools=None, prompt: str | None = None
     ) -> ChatCompletion:
+        system_prompt = prompt if prompt is not None else self.config.prompt
         req = {
             "model": self.config.model,
             "messages": [
                 {
                     "role": "system",
-                    "content": self.config.prompt,
+                    "content": system_prompt,
                 },
                 *messages,
             ],
@@ -140,14 +141,15 @@ class GrokClient:
         return response
 
     async def get_chat_completions_stream(
-        self, messages, tools=None, listener=None
+        self, messages, tools=None, listener=None, prompt: str | None = None
     ):
+        system_prompt = prompt if prompt is not None else self.config.prompt
         req = {
             "model": self.config.model,
             "messages": [
                 {
                     "role": "system",
-                    "content": self.config.prompt,
+                    "content": system_prompt,
                 },
                 *messages,
             ],

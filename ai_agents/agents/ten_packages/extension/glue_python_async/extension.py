@@ -231,8 +231,9 @@ class AsyncGlueExtension(AsyncLLMBaseExtension):
         )
 
         messages = []
-        if self.config.prompt:
-            messages.append({"role": "system", "content": self.config.prompt})
+        prompt = self.get_prompt(self.config.prompt) if self.config else ""
+        if prompt:
+            messages.append({"role": "system", "content": prompt})
 
         history = self.memory.get()
         while history:

@@ -158,7 +158,10 @@ class GrokExtension(AsyncLLMBaseExtension):
         async_ten_env.log_info(f"on_call_chat_completion: {kmessages}")
         if not self.client:
             raise RuntimeError("GrokClient is not initialized")
-        response = await self.client.get_chat_completions(kmessages, None)
+        prompt = self.get_prompt(self.config.prompt) if self.config else ""
+        response = await self.client.get_chat_completions(
+            kmessages, None, prompt=prompt
+        )
         return response.to_json()
 
     async def on_data_chat_completion(
@@ -345,8 +348,9 @@ class GrokExtension(AsyncLLMBaseExtension):
             # Make an async API call to get chat completions
             if not self.client:
                 raise RuntimeError("GrokClient is not initialized")
+            prompt = self.get_prompt(self.config.prompt) if self.config else ""
             await self.client.get_chat_completions_stream(
-                memory + messages, tools, listener
+                memory + messages, tools, listener, prompt=prompt
             )
 
             # Wait for the content to be finished

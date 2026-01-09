@@ -69,6 +69,7 @@ class StepFunRealtimeConfig(BaseModel):
     model: str = "step-1o-audio"
     language: str = "en"
     prompt: str = ""
+    prompt_params: dict = None  # Optional params for {{placeholder}} rendering in prompt
     temperature: float = 0.5
     max_tokens: int = 1024
     voice: str = "linjiajiejie"
@@ -556,9 +557,13 @@ class StepFunRealtime2Extension(AsyncMLLMBaseExtension):
                 silence_duration_ms=self.config.vad_silence_duration_ms,
             )
 
+        prompt = self.get_prompt(
+            self.config.prompt, getattr(self.config, "prompt_params", None)
+        )
+
         su = SessionUpdate(
             session=SessionUpdateParams(
-                instructions=self.config.prompt,
+                instructions=prompt,
                 model=self.config.model,
                 tool_choice="auto" if self.available_tools else "none",
                 tools=tools,
@@ -575,7 +580,7 @@ class StepFunRealtime2Extension(AsyncMLLMBaseExtension):
         )
 
         self.ten_env.log_info(
-            f"update session instructions={self.config.prompt} tools={len(tools)}"
+            f"update session instructions={prompt} tools={len(tools)}"
         )
         await self.conn.send_request(su)
 
