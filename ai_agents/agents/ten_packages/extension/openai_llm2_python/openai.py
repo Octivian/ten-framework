@@ -49,6 +49,7 @@ class OpenAILLM2Config(BaseModel):
     max_tokens: int = 4096
     seed: int = random.randint(0, 1000000)
     prompt: str = "You are a helpful assistant."
+    prompt_params: dict | None = None
     black_list_params: List[str] = field(
         default_factory=lambda: ["messages", "tools", "stream", "n", "model"]
     )

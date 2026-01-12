@@ -35,6 +35,7 @@ class GeminiLLM2Config(BaseModel):
     top_p: float = 0.95
     max_tokens: int = 4096
     prompt: str = "You are a helpful assistant."
+    prompt_params: dict | None = None
     black_list_params: List[str] = field(
         default_factory=lambda: ["messages", "tools", "stream", "model"]
     )
@@ -113,7 +114,7 @@ class GeminiChatAPI:
         """Stream chat completions from Gemini API."""
         try:
             # Build system prompt
-            system_prompt = self.config.prompt
+            system_prompt = request_input.prompt or self.config.prompt
 
             # Convert messages
             parsed_messages = []
