@@ -41,6 +41,10 @@ class GeminiLLM2Extension(AsyncLLM2BaseExtension):
         await super().on_start(async_ten_env)
         config_json, _ = await self.ten_env.get_property_to_json("")
         self.config = GeminiLLM2Config.model_validate_json(config_json)
+        if self.config:
+            self.config.prompt = self.get_prompt(
+                self.config.prompt, getattr(self.config, "prompt_params", None)
+            )
 
         # Mandatory properties
         if not self.config.api_key:
@@ -69,7 +73,13 @@ class GeminiLLM2Extension(AsyncLLM2BaseExtension):
         self, async_ten_env: AsyncTenEnv, request: LLMRequestRetrievePrompt
     ) -> LLMResponseRetrievePrompt:
         """Retrieve the current prompt from config."""
-        prompt = self.config.prompt if self.config else ""
+        prompt = (
+            self.get_prompt(
+                self.config.prompt, getattr(self.config, "prompt_params", None)
+            )
+            if self.config
+            else ""
+        )
         async_ten_env.log_info(
             f"Retrieved prompt for request_id: {request.request_id}"
         )
