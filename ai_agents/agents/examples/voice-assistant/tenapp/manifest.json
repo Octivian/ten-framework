@@ -14,9 +14,7 @@
       "version": "=0.23.9-t1"
     },
     {
-      "type": "system",
-      "name": "ten_ai_base",
-      "version": "0.7"
+      "path": "/ten_ai_base"
     },
     {
       "path": "../../../ten_packages/extension/streamid_adapter"

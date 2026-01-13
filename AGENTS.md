@@ -66,6 +66,17 @@ task run-gd-server   # 49483
 task run-api-server  # 8080
 ```
 
+### Designer 启动目录规则
+Designer 需要在**目标 app 的 tenapp 目录**启动，否则图会处于 `app=None` 的临时状态，导致连接校验失败（例如提示“Destination extension ... not found in the installed packages for app 'None'”）。
+
+正确方式（示例以 voice_assistant 为例）：
+```bash
+cd /app/agents/examples/voice-assistant/tenapp
+tman designer
+```
+
+如果需要编辑其他 app，请切到对应的 `tenapp` 目录重新启动 Designer。这样才能正常添加/连接该 app 依赖的节点。
+
 ## App / Graph / Agent 与启动逻辑
 ### 概念
 - app：对应一个 `tenapp/` 目录（`manifest.json` + 图配置），一个 app 可包含多个 graph。
