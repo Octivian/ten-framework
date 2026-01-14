@@ -1032,6 +1032,9 @@ export default function Home() {
   const [isConnected, setIsConnected] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [showPromptModal, setShowPromptModal] = useState(false);
+  const [promptParamsError, setPromptParamsError] = useState("");
+  const [promptParamsJson, setPromptParamsJson] = useState("");
   const [selectedModel, setSelectedModel] = useState<CharacterProfile>(
     characterOptions[0]
   );
@@ -1462,98 +1465,132 @@ export default function Home() {
     }
   };
 
-  const handleConnectToggle = async () => {
-    if (agoraService) {
-      try {
-        if (isConnected) {
-          setIsConnecting(true);
-          // Stop the agent service first
-          try {
-            await apiStopService("test-channel");
-            console.log("Agent stopped");
-          } catch (error) {
-            console.error("Failed to stop agent:", error);
-          }
+  const parsePromptParams = () => {
+    const trimmed = promptParamsJson.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (typeof parsed !== "object" || Array.isArray(parsed) || parsed === null) {
+        setPromptParamsError('请输入 JSON 对象，例如 {"key": "value"}');
+        return null;
+      }
+      return parsed as Record<string, unknown>;
+    } catch (error) {
+      setPromptParamsError("JSON 格式不正确");
+      return null;
+    }
+  };
 
-          await agoraService.disconnect();
-          setIsConnected(false);
-          stopPing(); // Stop ping when disconnecting
-          setIsConnecting(false);
-        } else {
-          setIsConnecting(true);
-          // Fetch Agora credentials from API server using the correct endpoint
-          const response = await fetch("/api/token/generate", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              request_id: Math.random().toString(36).substring(2, 15),
-              uid: Math.floor(Math.random() * 100000),
-              channel_name: "test-channel",
-            }),
-          });
+  const connectWithPromptParams = async (promptParamsPayload?: Record<string, unknown>) => {
+    if (!agoraService) {
+      return;
+    }
+    try {
+      setIsConnecting(true);
+      // Fetch Agora credentials from API server using the correct endpoint
+      const response = await fetch("/api/token/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          request_id: Math.random().toString(36).substring(2, 15),
+          uid: Math.floor(Math.random() * 100000),
+          channel_name: "test-channel",
+        }),
+      });
 
-          if (!response.ok) {
-            throw new Error(
-              `Failed to get Agora credentials: ${response.statusText}`
-            );
-          }
+      if (!response.ok) {
+        throw new Error(
+          `Failed to get Agora credentials: ${response.statusText}`
+        );
+      }
 
-          const responseData = await response.json();
+      const responseData = await response.json();
 
-          // Handle the response structure from agent server
-          const credentials = responseData.data || responseData;
+      // Handle the response structure from agent server
+      const credentials = responseData.data || responseData;
 
-          const agoraConfig: AgoraConfig = {
-            appId: credentials.appId || credentials.app_id,
-            channel: credentials.channel_name,
-            token: credentials.token,
-            uid: credentials.uid,
-          };
+      const agoraConfig: AgoraConfig = {
+        appId: credentials.appId || credentials.app_id,
+        channel: credentials.channel_name,
+        token: credentials.token,
+        uid: credentials.uid,
+      };
 
-          console.log("Agora config:", agoraConfig);
+      console.log("Agora config:", agoraConfig);
           const success = await agoraService.connect(agoraConfig);
           if (success) {
             setIsConnected(true);
 
-            // Sync microphone state with Agora service
-            setIsMuted(agoraService.isMicrophoneMuted());
+        // Sync microphone state with Agora service
+        setIsMuted(agoraService.isMicrophoneMuted());
 
-            // Start the agent service
+        // Start the agent service
             try {
               const startResult = await apiStartService({
                 channel: agoraConfig.channel,
                 userId: agoraConfig.uid || 0,
-                graphName: "voice_assistant_live2d",
+                graphName: "voice_assistant",
                 language: "en",
                 voiceType: selectedModel.voiceType,
+                promptParams: promptParamsPayload,
                 properties: {
                   llm: {
                     greeting: selectedModel.agentGreeting,
                   },
-                  main_control: {
-                    greeting: selectedModel.agentGreeting,
-                  },
-                },
-              });
+              main_control: {
+                greeting: selectedModel.agentGreeting,
+              },
+            },
+          });
 
-              console.log("Agent started:", startResult);
-            } catch (error) {
-              console.error("Failed to start agent:", error);
-            }
-
-            startPing();
-          } else {
-            throw new Error("Failed to connect to Agora");
-          }
-          setIsConnecting(false);
+          console.log("Agent started:", startResult);
+        } catch (error) {
+          console.error("Failed to start agent:", error);
         }
+
+        startPing();
+      } else {
+        throw new Error("Failed to connect to Agora");
+      }
+      setIsConnecting(false);
+    } catch (error) {
+      console.error("Connection error:", error);
+      setIsConnecting(false);
+    }
+  };
+
+  const handleConnectToggle = async () => {
+    if (!agoraService) {
+      return;
+    }
+    if (isConnected) {
+      try {
+        setIsConnecting(true);
+        // Stop the agent service first
+        try {
+          await apiStopService("test-channel");
+          console.log("Agent stopped");
+        } catch (error) {
+          console.error("Failed to stop agent:", error);
+        }
+
+        await agoraService.disconnect();
+        setIsConnected(false);
+        stopPing(); // Stop ping when disconnecting
+        setIsConnecting(false);
       } catch (error) {
         console.error("Connection error:", error);
         setIsConnecting(false);
       }
+      return;
     }
+
+    setPromptParamsError("");
+    setShowPromptModal(true);
   };
 
   const renderCharacterSwitch = () => (
@@ -1864,6 +1901,77 @@ export default function Home() {
           </div>
         </main>
       </div>
+
+      {showPromptModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-[#2f2d4b]">
+                  Connect Settings
+                </h2>
+                <p className="mt-1 text-sm text-[#6f6a92]">
+                  输入可选的 JSON，用于 prompt_params 模板渲染。
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPromptModal(false)}
+                className="rounded-full bg-[#f0eef8] px-3 py-1 text-xs font-semibold text-[#6f6a92]"
+              >
+                关闭
+              </button>
+            </div>
+
+            <div className="mt-4 grid gap-2">
+              <label className="text-sm font-medium text-[#2f2d4b]" htmlFor="prompt-params">
+                Prompt Parameters (Optional)
+              </label>
+              <textarea
+                id="prompt-params"
+                value={promptParamsJson}
+                onChange={(event) => {
+                  setPromptParamsJson(event.target.value);
+                  setPromptParamsError("");
+                }}
+                className="min-h-[160px] rounded-2xl border border-[#e2dff1] bg-[#fbfaff] px-4 py-3 font-mono text-sm text-[#2f2d4b]"
+                placeholder='{"studentName":"陈昕雨","job":"后端开发工程师（Java）"}'
+              />
+              <p className="text-xs text-[#8a86a3]">
+                留空表示使用默认配置。
+              </p>
+            </div>
+
+            {promptParamsError ? (
+              <div className="mt-3 rounded-xl bg-[#fff1f2] px-4 py-2 text-sm text-[#b4232a]">
+                {promptParamsError}
+              </div>
+            ) : null}
+
+            <div className="mt-5 flex flex-wrap justify-end gap-3">
+              <button
+                onClick={() => setShowPromptModal(false)}
+                className="rounded-xl border border-[#e2dff1] px-4 py-2 text-sm font-semibold text-[#6f6a92]"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  const parsed = parsePromptParams();
+                  if (parsed === null) {
+                    return;
+                  }
+                  setPromptParamsError("");
+                  setShowPromptModal(false);
+                  void connectWithPromptParams(parsed || undefined);
+                }}
+                className="rounded-xl bg-[#5b4ef2] px-4 py-2 text-sm font-semibold text-white"
+              >
+                确认并连接
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

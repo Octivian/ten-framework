@@ -12,11 +12,12 @@ interface StartRequestConfig {
     language: string;
     voiceType: "male" | "female";
     properties?: Record<string, unknown>;
+    promptParams?: Record<string, unknown>;
 }
 
 export const apiStartService = async (config: StartRequestConfig): Promise<any> => {
     const url = `/api/agents/start`;
-    const { channel, userId, graphName, language, voiceType, properties } = config;
+    const { channel, userId, graphName, language, voiceType, properties, promptParams } = config;
     const data: Record<string, unknown> = {
         request_id: genUUID(),
         channel_name: channel,
@@ -27,6 +28,9 @@ export const apiStartService = async (config: StartRequestConfig): Promise<any> 
     };
     if (properties) {
         data.properties = properties;
+    }
+    if (promptParams !== undefined) {
+        data.prompt_params = promptParams;
     }
 
     let resp: any = await axios.post(url, data);

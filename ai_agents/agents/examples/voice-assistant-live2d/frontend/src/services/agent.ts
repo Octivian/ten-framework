@@ -21,7 +21,7 @@ export class AgentService {
                 request_id: `start-${Date.now()}`,
                 channel_name: channelName,
                 user_uid: userUid,
-                graph_name: 'camera_va_openai_azure',
+                graph_name: 'voice_assistant',
                 properties: {
                     openai_chatgpt: {
                         model: 'gpt-4o'

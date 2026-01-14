@@ -22,7 +22,10 @@ export async function middleware(req: NextRequest) {
 
     console.log('Middleware triggered for:', pathname);
 
-    if (pathname.startsWith(`/api/agents/`)) {
+    if (pathname.startsWith(`/api/agents/start`)) {
+        // Let the local route handler inject prompt_params before proxying
+        return NextResponse.next();
+    } else if (pathname.startsWith(`/api/agents/`)) {
         // Proxy agents API requests to the agent server (port 8080)
         url.href = `${AGENT_SERVER_URL}${pathname.replace('/api/agents/', '/')}`;
 

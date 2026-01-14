@@ -24,8 +24,26 @@ export async function POST(request: NextRequest) {
             graph_name,
             language,
             voice_type,
-            properties
+            properties,
+            prompt_params
         } = body;
+
+        // Build properties object (align with playground behavior)
+        let finalProperties = properties || {};
+
+        if (prompt_params && Object.keys(prompt_params).length > 0) {
+            const attachPromptParams = (props: Record<string, any> | undefined) => ({
+                ...(props || {}),
+                ...(props?.prompt_params ? {} : { prompt_params }),
+            });
+
+            finalProperties = {
+                ...finalProperties,
+                v2v: attachPromptParams(finalProperties.v2v),
+                llm: attachPromptParams(finalProperties.llm),
+                mllm: attachPromptParams(finalProperties.mllm),
+            };
+        }
 
         // Send a POST request to start the agent
         const response = await axios.post(`${AGENT_SERVER_URL}/start`, {
@@ -33,8 +51,9 @@ export async function POST(request: NextRequest) {
             channel_name,
             user_uid,
             graph_name,
+            prompt_params,
             // Get the graph properties based on the graph name, language, and voice type
-            properties: properties,
+            properties: Object.keys(finalProperties).length > 0 ? finalProperties : undefined,
         });
 
         const responseData = response.data;
