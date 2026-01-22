@@ -209,5 +209,6 @@ class MainControlExtension(AsyncExtension):
         await _send_data(
             self.ten_env, "tts_flush", "tts", {"flush_id": str(uuid.uuid4())}
         )
-        await _send_cmd(self.ten_env, "flush", "agora_rtc")
+        # Notify WebSocket clients to stop any buffered playback immediately.
+        await _send_cmd(self.ten_env, "flush", "websocket_server")
         self.ten_env.log_info("[MainControlExtension] Interrupt signal sent")

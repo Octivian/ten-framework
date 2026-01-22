@@ -78,6 +78,8 @@ export class AudioPlayer {
   private gainNode: GainNode | null = null;
   private audioQueue: Float32Array[] = [];
   private isPlaying = false;
+  private currentSource: AudioBufferSourceNode | null = null;
+  private stopRequested = false;
 
   constructor(private config: AudioConfig = DEFAULT_AUDIO_CONFIG) {}
 
@@ -110,6 +112,10 @@ export class AudioPlayer {
     this.isPlaying = true;
 
     while (this.audioQueue.length > 0) {
+      if (this.stopRequested) {
+        this.audioQueue = [];
+        break;
+      }
       const pcmData = this.audioQueue.shift();
       if (!pcmData) break;
 
@@ -117,6 +123,7 @@ export class AudioPlayer {
     }
 
     this.isPlaying = false;
+    this.stopRequested = false;
   }
 
   private async playPCM(pcmData: Float32Array): Promise<void> {
@@ -135,10 +142,16 @@ export class AudioPlayer {
       audioBuffer.getChannelData(0).set(pcmData);
 
       const source = this.audioContext.createBufferSource();
+      this.currentSource = source;
       source.buffer = audioBuffer;
       source.connect(this.gainNode);
 
-      source.onended = () => resolve();
+      source.onended = () => {
+        if (this.currentSource === source) {
+          this.currentSource = null;
+        }
+        resolve();
+      };
       source.start();
     });
   }
@@ -149,13 +162,34 @@ export class AudioPlayer {
     }
   }
 
-  destroy(): void {
+  stop(): void {
+    this.stopRequested = true;
     this.audioQueue = [];
     this.isPlaying = false;
+    if (this.currentSource) {
+      try {
+        this.currentSource.stop();
+      } catch (_) {
+        // ignore
+      } finally {
+        this.currentSource = null;
+      }
+    }
+  }
+
+  destroy(): void {
+    this.stop();
     if (this.audioContext) {
-      this.audioContext.close();
+      if (this.audioContext.state !== "closed") {
+        try {
+          this.audioContext.close();
+        } catch (_) {
+          // ignore double-close errors
+        }
+      }
       this.audioContext = null;
     }
+    this.gainNode = null;
   }
 }
 

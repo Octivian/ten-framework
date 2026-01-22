@@ -22,13 +22,15 @@
             {
               "type": "extension",
               "name": "stt",
-              "addon": "deepgram_asr_python",
+              "addon": "bytedance_llm_based_asr",
               "extension_group": "stt",
               "property": {
                 "params": {
-                  "api_key": "${env:DEEPGRAM_API_KEY}",
-                  "language": "en-US",
-                  "model": "nova-3"
+                  "access_key": "${env:BYTEDANCE_ASR_ACCESS_KEY}",
+                  "language": "zh-CN",
+                  "app_key": "${env:BYTEDANCE_ASR_APP_KEY}",
+                  "resource_id": "${env:BYTEDANCE_ASR_RESOURCE_ID}",
+                  "model_version": "${env:BYTEDANCE_ASR_LLM_MODEL_VERSION|}"
                 }
               }
             },
@@ -38,30 +40,27 @@
               "addon": "openai_llm2_python",
               "extension_group": "chatgpt",
               "property": {
-                "base_url": "https://api.openai.com/v1",
-                "api_key": "${env:OPENAI_API_KEY}",
-                "frequency_penalty": 0.9,
-                "model": "${env:OPENAI_MODEL}",
-                "max_tokens": 512,
-                "prompt": "",
-                "proxy_url": "${env:OPENAI_PROXY_URL|}",
-                "greeting": "TEN Agent connected. How can I help you today?",
-                "max_memory_length": 10
+                "base_url": "https://ark.cn-beijing.volces.com/api/v3",
+                "api_key": "${env:VOLC_OPENAI_API_KEY}",
+                "model": "ep-20251010142720-svlxj",
+                "proxy_url": "${env:OPENAI_PROXY_URL|}"
               }
             },
             {
               "type": "extension",
               "name": "tts",
-              "addon": "elevenlabs_tts2_python",
+              "addon": "bytedance_tts_duplex",
               "extension_group": "tts",
               "property": {
                 "dump": false,
                 "dump_path": "./",
                 "params": {
-                  "key": "${env:ELEVENLABS_TTS_KEY}",
-                  "model_id": "eleven_multilingual_v2",
-                  "voice_id": "pNInz6obpgDQGcFmaJgB",
-                  "output_format": "pcm_16000"
+                  "app_id": "${env:BYTEDANCE_TTS_APPID}",
+                  "token": "${env:BYTEDANCE_TTS_TOKEN}",
+                  "speaker": "zh_female_shuangkuaisisi_moon_bigtts",
+                  "audio_params": {
+                    "sample_rate": 16000
+                  }
                 }
               }
             },
@@ -71,7 +70,7 @@
               "addon": "main_python",
               "extension_group": "control",
               "property": {
-                "greeting": "TEN Agent connected. How can I help you today?"
+                "greeting": "Agent已连接，有什么需要帮助的吗？"
               }
             },
             {
