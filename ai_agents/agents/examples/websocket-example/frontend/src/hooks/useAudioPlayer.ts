@@ -30,9 +30,30 @@ export function useAudioPlayer(wsManager: WebSocketManager | null) {
       }
     });
 
+    const unsubscribeData = wsManager?.onData((message) => {
+      if (
+        message.name === "text_data" &&
+        message.data?.data_type === "transcribe" &&
+        message.data?.role === "user" &&
+        message.data?.text
+      ) {
+        player.stop();
+        setIsPlaying(false);
+      }
+    });
+
+    const unsubscribeCmd = wsManager?.onCmd((message) => {
+      if (message.name === "flush" || message.name === "interrupt") {
+        player.stop();
+        setIsPlaying(false);
+      }
+    });
+
     // Cleanup
     return () => {
       unsubscribe?.();
+      unsubscribeData?.();
+      unsubscribeCmd?.();
       player.destroy();
     };
   }, [wsManager]);
