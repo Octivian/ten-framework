@@ -50,6 +50,7 @@ export default function Action(props: { className?: string }) {
     const res: any = await apiPing(channel);
     if (res?.code == 0) {
       dispatch(setAgentConnected(true));
+      startPing();
     }
   };
 
@@ -100,6 +101,14 @@ export default function Action(props: { className?: string }) {
       });
       const { code, msg } = res || {};
       if (code != 0) {
+        if (code == "10003") {
+          dispatch(setAgentConnected(true));
+          toast.success("Agent already connected");
+          startPing();
+          setShowConnectDialog(false);
+          setLoading(false);
+          return;
+        }
         if (code == "10001") {
           toast.error(
             "The number of users experiencing the program simultaneously has exceeded the limit. Please try again later."

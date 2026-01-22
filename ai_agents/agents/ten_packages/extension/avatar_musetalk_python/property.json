@@ -1,0 +1,13 @@
+{
+  "service_base_url": "http://127.0.0.1:7800",
+  "video_path": "videos/avatar.mp4",
+  "avatar_id": "",
+  "output_width": 0,
+  "output_height": 0,
+  "output_fps": 25,
+  "pixel_fmt": "rgb24",
+  "input_audio_sample_rate": 24000,
+  "video_frame_name": "video_frame",
+  "min_chunk_ms": 200,
+  "max_buffer_chunks": 200
+}

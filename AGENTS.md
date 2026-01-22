@@ -37,6 +37,17 @@ Python 使用 black（默认行宽 80）；Go 使用 `gofmt`；TypeScript/JavaSc
 当需要让任意 app 使用定制的 `ten_ai_base` 时，将该 app 的 `tenapp/manifest.json` 中 `ten_ai_base` 依赖改为路径依赖 `/ten_ai_base`（例如 `ai_agents/agents/examples/voice-assistant/tenapp/manifest.json`）。
 当前仓库中 `ten_ai_base` 是 git 子模块；在容器环境中通过 `docker-compose` 把仓库里的 `ten_ai_base` 挂载到 `/ten_ai_base`，因此路径依赖可直接生效。若 app 仍使用 `type: system, name: ten_ai_base` 的版本依赖，就不会自动使用定制版；非容器环境需调整路径或改用本地绝对路径。
 
+### avatar-musetalk 模块位置与接线
+- 服务封装：`tools/avatar-musetalk`（FastAPI + WebSocket，已接入 MuseTalk 推理流程）
+- MuseTalk repo：`third_party/musetalk`（子模块），并设置 `MUSE_TALK_DIR`
+- TEN 扩展：`ai_agents/agents/ten_packages/extension/avatar_musetalk_python`
+- 典型接线：`bytedance_tts_duplex -> avatar_musetalk_python -> agora_rtc (video_frame)`
+- 本地启动示例：
+```bash
+cd tools/avatar-musetalk
+python3 -m uvicorn app.server:app --host 0.0.0.0 --port 7800
+```
+
 ### 开发环境容器启动记录
 使用最新 `dev` 分支代码重启开发容器（执行于仓库根目录）：
 ```bash

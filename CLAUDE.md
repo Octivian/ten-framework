@@ -245,6 +245,113 @@ Copy `.env.example` to `.env` and configure:
 - **ASR:** `DEEPGRAM_API_KEY`, `AZURE_ASR_*`
 - **TTS:** `ELEVENLABS_TTS_KEY`, `AZURE_TTS_*`
 
+## Coding Style & Naming Conventions
+
+Python 使用 black（默认行宽 80）；Go 使用 `gofmt`；TypeScript/JavaScript 使用 Biome 配置。新代码优先使用 TypeScript，并保持现有目录命名与模块分层一致。不要手改生成文件，如 `BUILD.gn`、`compile_commands.json`、`out/`、`.ten/`、`node_modules/`、`build/`。
+
+## Testing Guidelines
+
+测试框架以 `task test` 为入口，扩展测试位于 `ai_agents/agents/ten_packages/extension/*/tests/`，核心测试位于 `tests/`。新增功能需补充单元或集成测试，UI 变更应包含必要的手动验证说明。
+
+## Commit & PR Conventions
+
+提交信息采用 Conventional Commits，例如 `feat: add new ASR integration`、`fix: resolve memory leak`。PR 需说明变更内容与原因，关联 Issue（如 `Fixes #123`），UI 变更需截图，提交前请运行 `task format` 与 `task lint` 并确保测试通过。
+
+## Notes & Records
+
+### Custom ten_ai_base Usage
+
+当需要让任意 app 使用定制的 `ten_ai_base` 时，将该 app 的 `tenapp/manifest.json` 中 `ten_ai_base` 依赖改为路径依赖 `/ten_ai_base`（例如 `ai_agents/agents/examples/voice-assistant/tenapp/manifest.json`）。
+当前仓库中 `ten_ai_base` 是 git 子模块；在容器环境中通过 `docker-compose` 把仓库里的 `ten_ai_base` 挂载到 `/ten_ai_base`，因此路径依赖可直接生效。若 app 仍使用 `type: system, name: ten_ai_base` 的版本依赖，就不会自动使用定制版；非容器环境需调整路径或改用本地绝对路径。
+
+### avatar-musetalk Module Location & Wiring
+
+- 服务封装：`tools/avatar-musetalk`（FastAPI + WebSocket，已接入 MuseTalk 推理流程）
+- MuseTalk repo：`third_party/musetalk`（子模块），并设置 `MUSE_TALK_DIR`
+- TEN 扩展：`ai_agents/agents/ten_packages/extension/avatar_musetalk_python`
+- 典型接线：`bytedance_tts_duplex -> avatar_musetalk_python -> agora_rtc (video_frame)`
+- 本地启动示例：
+```bash
+cd tools/avatar-musetalk
+python3 -m uvicorn app.server:app --host 0.0.0.0 --port 7800
+```
+
+### Dev Container Startup
+
+使用最新 `dev` 分支代码重启开发容器（执行于仓库根目录）：
+```bash
+git pull --rebase --autostash origin dev
+docker compose -f ai_agents/docker-compose.yml down
+docker compose -f ai_agents/docker-compose.yml up -d --build
+```
+容器名称通常为 `ten_agent_dev`，可用 `docker compose -f ai_agents/docker-compose.yml ps` 查看状态。
+
+### ai-msg Startup (Following README)
+
+进入容器后执行：
+```bash
+cd /app/agents/examples/ai-msg
+task install
+task run
+```
+说明：在 amd64 容器（QEMU）环境里，`task install` 的前端依赖安装使用 bun 可能触发 `Illegal instruction`。可用以下方式绕过并启动前端：
+```bash
+cd /app/playground
+npm install
+npm run dev -- -H 0.0.0.0 -p 3000
+```
+其余服务可单独启动：
+```bash
+cd /app/agents/examples/ai-msg
+task run-gd-server   # 49483
+task run-api-server  # 8080
+```
+
+### Designer Startup Directory Rule
+
+Designer 需要在**目标 app 的 tenapp 目录**启动，否则图会处于 `app=None` 的临时状态，导致连接校验失败（例如提示"Destination extension ... not found in the installed packages for app 'None'"）。
+
+正确方式（示例以 voice_assistant 为例）：
+```bash
+cd /app/agents/examples/voice-assistant/tenapp
+tman designer
+```
+
+如果需要编辑其他 app，请切到对应的 `tenapp` 目录重新启动 Designer。这样才能正常添加/连接该 app 依赖的节点。
+
+## App / Graph / Agent Concepts & Startup Logic
+
+### Concepts
+
+- app：对应一个 `tenapp/` 目录（`manifest.json` + 图配置），一个 app 可包含多个 graph。
+- graph：可视化流程定义（Designer 里编辑/查看）。
+- agent：运行时实例（某个 graph 的进程/会话）。
+
+### Services & Responsibilities
+
+- 前端 3000：页面展示与 RTC 加入逻辑。
+- Go API 8080：控制面（`/start`、`/stop`、`/ping`），负责拉起/停止 agent。
+- Designer 49483：图编辑器，支持加载多个 app 的 graph 供编辑。
+
+### Startup & Interaction Logic
+
+- Go API Server 启动时绑定 `-tenapp_dir`，`/start` 只会启动该目录下的 graph（内部执行 `tman run start`）。
+- Designer 同时加载多个 app 不会改变 8080 可启动的范围，只是用于编辑/浏览。
+- 前端进入页面会自动加入 RTC channel；该 channel 由前端生成并缓存（刷新时通常复用），不需要提前创建。
+- 点击 Connect 仅触发 `/start`，不负责加入房间；即使未启动 agent，前端也已在 channel 内。
+- `/start` 会把前端的 channel 信息写入 agent 属性（例如 `agora_rtc.channel`），用于让 agent 进入同一房间；未启动时不会有 agent 加入。
+- Designer 也可以直接启动 agent（执行 `tman run start`）。只要 graph 的 `agora_rtc` 配置好 channel 等属性，启动时 agent 会直接加入该 channel，无需 3000 页面点击 Connect。
+- 结论：**启动 agent** 和 **前端 Connect** 是两件事；Connect 只是触发 `/start`，而"加入 channel"发生在前端页面加载时或 agent 启动时。
+
+### Key Properties for Agent-Frontend Communication (agora_rtc)
+
+- `agora_rtc.app_id`：必须是有效的 Agora App ID（通常来自 `AGORA_APP_ID`）。
+- `agora_rtc.token`：需要有效 token；走 8080 `/start` 会自动生成并注入（基于 `AGORA_APP_ID`/`AGORA_APP_CERTIFICATE`），Designer 直接启动时需自行填入。
+- `agora_rtc.channel`：必须与前端页面进入时使用的 channel 一致（前端会自动生成/缓存）。
+- `agora_rtc.remote_stream_id`：必须等于前端 `userId`（前端启动时随机生成并缓存）。
+- `agora_rtc.stream_id`：agent 自己的 uid（任意未占用的整数即可）。
+- `agora_rtc.subscribe_audio` / `publish_audio` / `publish_data`：保持 `true`，保证音频与数据通道都能收发。
+
 ## Additional Documentation
 
 - **AI Agents Guide:** See `ai_agents/CLAUDE.md` for detailed extension development patterns

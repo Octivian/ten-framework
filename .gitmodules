@@ -7,3 +7,6 @@
 [submodule "ten_ai_base"]
 	path = ten_ai_base
 	url = git@github.com:Octivian/ten_ai_base.git
+[submodule "third_party/musetalk"]
+	path = third_party/musetalk
+	url = https://github.com/TMElyralab/MuseTalk

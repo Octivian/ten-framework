@@ -19,7 +19,13 @@
                 "remote_stream_id": 123,
                 "subscribe_audio": true,
                 "publish_audio": true,
+                "publish_video": true,
+                "publish_video_width": 1080,
+                "publish_video_height": 1920,
+                "publish_video_frame_rate": 25,
+                "audio_frame_send_delay_ms": 0,
                 "publish_data": true,
+                "use_frame_counted_audio_timestamp": true,
                 "enable_agora_asr": false
               }
             },
@@ -62,8 +68,31 @@
                 "params": {
                   "app_id": "${env:BYTEDANCE_TTS_APPID}",
                   "token": "${env:BYTEDANCE_TTS_TOKEN}",
-                  "speaker": "zh_female_shuangkuaisisi_moon_bigtts"
+                  "speaker": "zh_female_shuangkuaisisi_moon_bigtts",
+                  "audio_params": {
+                    "sample_rate": 16000
+                  }
                 }
+              }
+            },
+            {
+              "type": "extension",
+              "name": "avatar_musetalk",
+              "addon": "avatar_musetalk_python",
+              "extension_group": "avatar",
+              "property": {
+                "service_base_url": "http://172.20.0.1:7800",
+                "video_path": "/home/mssj/LiveTalking/data/raw_video/张111.mp4",
+                "avatar_id": "muse_libai",
+                "output_width": 540,
+                "output_height": 960,
+                "output_fps": 25,
+                "pixel_fmt": "i420",
+                "input_audio_sample_rate": 16000,
+                "video_frame_name": "video_frame",
+                "min_chunk_ms": 40,
+                "binary_frames": true,
+                "audio_pacing_scale": 1.0
               }
             },
             {
@@ -164,6 +193,16 @@
                     }
                   ]
                 }
+              ],
+              "video_frame": [
+                {
+                  "name": "video_frame",
+                  "source": [
+                    {
+                      "extension": "avatar_musetalk"
+                    }
+                  ]
+                }
               ]
             },
             {
@@ -174,6 +213,19 @@
                   "dest": [
                     {
                       "extension": "stt"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "extension": "avatar_musetalk",
+              "audio_frame": [
+                {
+                  "name": "pcm_frame",
+                  "source": [
+                    {
+                      "extension": "tts"
                     }
                   ]
                 }

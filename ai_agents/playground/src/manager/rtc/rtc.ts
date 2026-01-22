@@ -27,6 +27,7 @@ interface TextDataChunk {
 
 export class RtcManager extends AGEventEmitter<RtcEvents> {
   private _joined;
+  private _statsTimer: number | null = null;
   client: IAgoraRTCClient;
   localTracks: IUserTracks;
   appId: string | null = null;
@@ -38,6 +39,10 @@ export class RtcManager extends AGEventEmitter<RtcEvents> {
     this._joined = false;
     this.localTracks = {};
     this.client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+    if (typeof window !== "undefined") {
+      (window as any).__rtcManager = this;
+      (window as any).__agoraClient = this.client;
+    }
     this._listenRtcEvents();
   }
 
@@ -54,6 +59,7 @@ export class RtcManager extends AGEventEmitter<RtcEvents> {
       this.userId = userId;
       await this.client?.join(appId, channel, token, userId);
       this._joined = true;
+      this._startStatsTimer();
     }
   }
 
@@ -137,12 +143,41 @@ export class RtcManager extends AGEventEmitter<RtcEvents> {
     if (this._joined) {
       await this.client?.leave();
     }
+    this._stopStatsTimer();
     this._resetData();
   }
 
   // ----------- public methods ------------
 
   // -------------- private methods --------------
+  private _startStatsTimer() {
+    if (this._statsTimer) {
+      return;
+    }
+    this._statsTimer = window.setInterval(async () => {
+      if (!this._joined) {
+        return;
+      }
+      try {
+        const localVideoStats = await this.client.getLocalVideoStats();
+        const remoteVideoStats = await this.client.getRemoteVideoStats();
+        console.log("[rtc] video stats", {
+          localVideoStats,
+          remoteVideoStats,
+        });
+      } catch (err) {
+        console.warn("[rtc] stats failed", err);
+      }
+    }, 2000);
+  }
+
+  private _stopStatsTimer() {
+    if (this._statsTimer) {
+      window.clearInterval(this._statsTimer);
+      this._statsTimer = null;
+    }
+  }
+
   private _listenRtcEvents() {
     this.client.on("network-quality", (quality) => {
       this.emit("networkQuality", quality);

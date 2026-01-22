@@ -1,0 +1,65 @@
+{
+  "type": "extension",
+  "name": "avatar_musetalk_python",
+  "version": "0.1.0",
+  "dependencies": [
+    {
+      "type": "system",
+      "name": "ten_runtime_python",
+      "version": "0.11"
+    },
+    {
+      "type": "system",
+      "name": "ten_ai_base",
+      "version": "0.7"
+    }
+  ],
+  "package": {
+    "include": [
+      "manifest.json",
+      "property.json",
+      "**.py",
+      "README.md",
+      "requirements.txt"
+    ]
+  },
+  "api": {
+    "property": {
+      "properties": {
+        "service_base_url": {
+          "type": "string"
+        },
+        "video_path": {
+          "type": "string"
+        },
+        "avatar_id": {
+          "type": "string"
+        },
+        "output_width": {
+          "type": "int64"
+        },
+        "output_height": {
+          "type": "int64"
+        },
+        "output_fps": {
+          "type": "int64"
+        },
+        "pixel_fmt": {
+          "type": "string"
+        },
+        "input_audio_sample_rate": {
+          "type": "int64"
+        },
+        "video_frame_name": {
+          "type": "string"
+        },
+        "min_chunk_ms": {
+          "type": "int64"
+        },
+        "max_buffer_chunks": {
+          "type": "int64"
+        }
+      }
+    }
+  }
+}

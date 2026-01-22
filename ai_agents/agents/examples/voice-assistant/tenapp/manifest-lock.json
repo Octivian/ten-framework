@@ -62,6 +62,10 @@
         {
           "type": "system",
           "name": "ten_runtime_python"
+        },
+        {
+          "type": "system",
+          "name": "ten_ai_base"
         }
       ],
       "path": "../../../ten_packages/extension/streamid_adapter"
@@ -439,6 +443,19 @@
         }
       ],
       "path": "../../../ten_packages/extension/bytedance_tts_duplex"
+    },
+    {
+      "type": "extension",
+      "name": "avatar_musetalk_python",
+      "version": "0.1.0",
+      "hash": "6ae82fd9669187cfdc27247df0193750087558a55965b236f837fc59eb794840",
+      "dependencies": [
+        {
+          "type": "system",
+          "name": "ten_runtime_python"
+        }
+      ],
+      "path": "../../../ten_packages/extension/avatar_musetalk_python"
     },
     {
       "type": "extension",
