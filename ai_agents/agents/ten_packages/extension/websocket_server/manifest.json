@@ -140,7 +140,11 @@
         "name": "pcm_frame"
       }
     ],
-    "video_frame_in": [],
+    "video_frame_in": [
+      {
+        "name": "video_frame"
+      }
+    ],
     "video_frame_out": []
   },
   "scripts": {

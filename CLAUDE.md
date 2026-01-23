@@ -352,6 +352,88 @@ tman designer
 - `agora_rtc.stream_id`：agent 自己的 uid（任意未占用的整数即可）。
 - `agora_rtc.subscribe_audio` / `publish_audio` / `publish_data`：保持 `true`，保证音频与数据通道都能收发。
 
+## Remote Development (ms-gpu Server)
+
+当前开发调试环境在远程服务器 `ms-gpu` 上运行，本地修改代码后需同步到远程。
+
+### 环境信息
+
+| 项目 | 值 |
+|------|-----|
+| 远程服务器 | ms-gpu |
+| 项目路径 | `/home/mssj/ten-framework` |
+| 容器名称 | ten_agent_dev |
+| 推理服务 | http://172.20.0.1:7800 (MuseTalk) |
+| WebSocket 端口 | 8765 |
+
+### 代码同步
+
+本地修改代码后，需同步到远程服务器：
+
+```bash
+# 同步整个 agents 目录
+rsync -avz /Users/shawn/Work/2024mingshan/project/ten-framework/ai_agents/agents/ ms-gpu:/home/mssj/ten-framework/ai_agents/agents/
+
+# 仅同步单个文件（如 property.json）
+rsync -avz /Users/shawn/Work/2024mingshan/project/ten-framework/ai_agents/agents/examples/voice-assistant/tenapp/property.json ms-gpu:/home/mssj/ten-framework/ai_agents/agents/examples/voice-assistant/tenapp/
+```
+
+### 容器操作
+
+```bash
+# 查看容器状态
+ssh ms-gpu "cd /home/mssj/ten-framework/ai_agents && docker compose ps"
+
+# 进入容器
+ssh ms-gpu "cd /home/mssj/ten-framework/ai_agents && docker compose exec ten_agent_dev bash"
+
+# 重启容器（释放端口等资源）
+ssh ms-gpu "cd /home/mssj/ten-framework/ai_agents && docker compose restart ten_agent_dev"
+```
+
+### 启动 voice-assistant (WebSocket 模式)
+
+```bash
+# 1. 安装依赖
+ssh ms-gpu "cd /home/mssj/ten-framework/ai_agents && docker compose exec ten_agent_dev bash -c 'cd /app/agents/examples/voice-assistant/tenapp && tman install'"
+
+# 2. 后台启动服务
+ssh ms-gpu "cd /home/mssj/ten-framework/ai_agents && docker compose exec -d ten_agent_dev bash -c 'cd /app/agents/examples/voice-assistant/tenapp && tman run start > /tmp/voice_assistant.log 2>&1'"
+
+# 3. 查看启动日志
+ssh ms-gpu "cd /home/mssj/ten-framework/ai_agents && docker compose exec ten_agent_dev bash -c 'tail -50 /tmp/voice_assistant.log'"
+
+# 4. 检查服务状态
+ssh ms-gpu "cd /home/mssj/ten-framework/ai_agents && docker compose exec ten_agent_dev bash -c 'grep -i \"WebSocket server started\" /tmp/voice_assistant.log'"
+```
+
+### 停止服务
+
+```bash
+# 停止所有 tman 进程
+ssh ms-gpu "cd /home/mssj/ten-framework/ai_agents && docker compose exec ten_agent_dev bash -c 'pkill -9 -f tman'"
+
+# 或重启容器彻底清理
+ssh ms-gpu "cd /home/mssj/ten-framework/ai_agents && docker compose restart ten_agent_dev"
+```
+
+### voice-assistant 数据流 (WebSocket 模式)
+
+```
+WebSocket Client (ws://0.0.0.0:8765)
+        │
+        ▼
+┌─────────────────┐
+│ websocket_server│──audio──> stt ──> main_control ──> llm
+└─────────────────┘                                     │
+        ▲                                               ▼
+        │ audio                                        tts
+        │                                               │
+        │ video          ┌─────────────────┐           │
+        └────────────────│ avatar_musetalk │<──audio───┘
+                         └─────────────────┘
+```
+
 ## Additional Documentation
 
 - **AI Agents Guide:** See `ai_agents/CLAUDE.md` for detailed extension development patterns

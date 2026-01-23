@@ -260,6 +260,40 @@ class WebSocketServerManager:
         except Exception as e:
             self.ten_env.log_error(f"Error sending audio to client: {e}")
 
+    async def send_video_to_clients(
+        self, video_data: bytes, metadata: Optional[dict[str, Any]] = None
+    ) -> None:
+        """
+        Send video frame data to connected WebSocket client
+
+        Args:
+            video_data: Raw video frame bytes
+            metadata: Optional metadata to include (width, height, format, etc.)
+        """
+        if not self.current_client:
+            self.ten_env.log_debug("No client connected, skipping video send")
+            return
+
+        try:
+            # Encode video data to base64
+            video_base64 = base64.b64encode(video_data).decode("utf-8")
+
+            # Build message
+            message = {"type": "video", "video": video_base64}
+
+            if metadata:
+                message["metadata"] = metadata
+
+            # Send to client
+            await self.broadcast(message)
+
+            self.ten_env.log_debug(
+                f"Sent {len(video_data)} bytes of video to client"
+            )
+
+        except Exception as e:
+            self.ten_env.log_error(f"Error sending video to client: {e}")
+
     async def send_to_client(
         self, client_id: str, message: dict[str, Any]
     ) -> bool:

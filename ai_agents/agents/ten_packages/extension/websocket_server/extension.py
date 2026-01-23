@@ -137,23 +137,22 @@ class WebsocketServerExtension(AsyncExtension):
         data_name = data.get_name()
         ten_env.log_debug(f"Received data: {data_name}")
         try:
-            if data_name == "text_data":
-                # Convert data to JSON
-                data_json, _ = data.get_property_to_json(None)
-                ten_env.log_info(f"Data: {data_json}")
-                data_dict = json.loads(data_json)
+            # Convert data to JSON
+            data_json, _ = data.get_property_to_json(None)
+            ten_env.log_info(f"Data [{data_name}]: {data_json}")
+            data_dict = json.loads(data_json)
 
-                # Broadcast to all WebSocket clients
-                if self.ws_server:
-                    message = {
-                        "type": "data",
-                        "name": data_name,
-                        "data": data_dict,
-                    }
-                    await self.ws_server.broadcast(message)
-                    ten_env.log_debug(
-                        f"Broadcasted data {data_name} to WebSocket clients"
-                    )
+            # Broadcast to all WebSocket clients
+            if self.ws_server:
+                message = {
+                    "type": "data",
+                    "name": data_name,
+                    "data": data_dict,
+                }
+                await self.ws_server.broadcast(message)
+                ten_env.log_debug(
+                    f"Broadcasted data {data_name} to WebSocket clients"
+                )
 
         except Exception as e:
             ten_env.log_error(
@@ -217,9 +216,44 @@ class WebsocketServerExtension(AsyncExtension):
     async def on_video_frame(
         self, ten_env: AsyncTenEnv, video_frame: VideoFrame
     ) -> None:
-        """Handle video frames (not typically used for this extension)"""
+        """
+        Handle video frames from TEN graph (e.g., avatar_musetalk output)
+        Sends video to WebSocket clients as base64-encoded JSON
+        """
         video_frame_name = video_frame.get_name()
         ten_env.log_debug(f"Received video frame: {video_frame_name}")
+
+        if not self.ws_server:
+            ten_env.log_warn(
+                "WebSocket server not initialized, dropping video frame"
+            )
+            return
+
+        try:
+            # Get video data from frame
+            buf = video_frame.lock_buf()
+            video_data = bytes(buf)
+            video_frame.unlock_buf(buf)
+
+            # Build metadata with video properties
+            metadata = {
+                "width": video_frame.get_width(),
+                "height": video_frame.get_height(),
+                "timestamp": video_frame.get_timestamp(),
+                "pixel_fmt": video_frame.get_pixel_fmt().name if hasattr(video_frame.get_pixel_fmt(), 'name') else str(video_frame.get_pixel_fmt()),
+            }
+
+            # Send to WebSocket clients
+            await self.ws_server.send_video_to_clients(video_data, metadata)
+
+            ten_env.log_debug(
+                f"Forwarded {len(video_data)} bytes of video to WebSocket clients"
+            )
+
+        except Exception as e:
+            ten_env.log_error(
+                f"Error processing video frame for WebSocket: {e}"
+            )
 
     async def _on_audio_received(self, audio_data: AudioData) -> None:
         """

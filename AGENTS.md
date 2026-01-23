@@ -10,28 +10,109 @@ task gen        # 生成 GN/Ninja 构建文件
 task build      # 构建核心框架
 task gen-tman   # 生成 tman 构建
 task build-tman # 构建 tman
+task clean      # 清理构建产物
+```
+`tgn` 包装了 GN 生成与 Ninja 构建：
+```bash
+tgn gen linux x64 debug -- log_level=1 ten_enable_ten_rust=true
+tgn build linux x64 debug
 ```
 AI Agents 相关命令在 `ai_agents/`：
 ```bash
 cd ai_agents
 task lint                  # Python 扩展 lint
+task lint-extension EXTENSION=deepgram_asr_python
 task format                # black 格式化
+task check                 # 检查格式
 task test                  # 运行所有测试
 task test-extension EXTENSION=agents/ten_packages/extension/elevenlabs_tts_python
+task test-extension-no-install EXTENSION=<path>
 ```
 前端与脚本格式化使用 Biome：`npm run lint`、`npm run format`。
+
+## Docker 开发环境（推荐）
+在 `ai_agents/` 下启动容器：
+```bash
+cd ai_agents
+cp .env.example .env
+docker compose up -d
+```
+进入容器并运行示例：
+```bash
+docker compose exec ten_agent_dev bash
+cd /app/agents/examples/voice-assistant-realtime/tenapp
+tman install
+./scripts/install_python_deps.sh
+```
+在容器内启动服务：
+```bash
+tman run start
+```
+新终端分别启动：
+```bash
+docker compose exec ten_agent_dev bash -c "cd /app/server && go run main.go -tenapp_dir=/app/agents/examples/voice-assistant-realtime/tenapp"
+docker compose exec ten_agent_dev bash -c "cd /app/playground && npm run dev"
+docker compose exec ten_agent_dev bash -c "cd /app/agents/examples/voice-assistant-realtime/tenapp && tman designer"
+```
+
+## 本地运行示例（非 Docker）
+```bash
+cd ai_agents/agents/examples/voice-assistant
+task install
+task run
+```
+单独启动：
+```bash
+task run-api-server
+task run-frontend
+task run-gd-server
+```
 
 ## 编码风格与命名规范
 Python 使用 black（默认行宽 80）；Go 使用 `gofmt`；TypeScript/JavaScript 使用 Biome 配置。新代码优先使用 TypeScript，并保持现有目录命名与模块分层一致。不要手改生成文件，如 `BUILD.gn`、`compile_commands.json`、`out/`、`.ten/`、`node_modules/`、`build/`。
 
 ## 测试指南
 测试框架以 `task test` 为入口，扩展测试位于 `ai_agents/agents/ten_packages/extension/*/tests/`，核心测试位于 `tests/`。新增功能需补充单元或集成测试，UI 变更应包含必要的手动验证说明。
+集成测试示例：
+```bash
+task asr-guarder-test EXTENSION=azure_asr_python CONFIG_DIR=tests/configs
+task tts-guarder-test EXTENSION=bytedance_tts_duplex CONFIG_DIR=tests/configs
+```
 
 ## 提交与 PR 规范
 提交信息采用 Conventional Commits，例如 `feat: add new ASR integration`、`fix: resolve memory leak`。PR 需说明变更内容与原因，关联 Issue（如 `Fixes #123`），UI 变更需截图，提交前请运行 `task format` 与 `task lint` 并确保测试通过。
 
 ## 环境与配置提示
 `ai_agents/.env.example` 是环境变量模板，复制为 `ai_agents/.env` 后填入各类 API key。扩展运行依赖 `PYTHONPATH` 设置（见 `ai_agents/Taskfile.yml`），如需单独运行示例请进入 `ai_agents/agents/examples/<example>` 并执行 `task install`、`task run`。
+
+## Python 扩展开发
+扩展运行依赖 `PYTHONPATH`：
+```bash
+export PYTHONPATH="./agents/ten_packages/system/ten_runtime_python/lib:./agents/ten_packages/system/ten_runtime_python/interface:./agents/ten_packages/system/ten_ai_base/interface"
+```
+扩展结构：
+```
+extension_name/
+├── manifest.json
+├── property.json
+├── addon.py
+├── extension.py
+└── tests/bin/start
+```
+基础类来自 `ten_ai_base`：`AsyncASRBaseExtension`、`AsyncTTSBaseExtension`、`LLMBaseExtension`。
+
+## tman 常用命令
+```bash
+tman install
+tman install --standalone
+tman run start
+tman designer
+```
+
+## 自动生成文件（不要手改）
+- `manifest-lock.json`, `compile_commands.json`, `BUILD.gn`
+- `.gn`, `.gnfiles`, `out/`, `.ten/`, `bin/`, `.release/`
+- `build/`, `node_modules/`, `*.log`
 
 ## 记录
 当需要让任意 app 使用定制的 `ten_ai_base` 时，将该 app 的 `tenapp/manifest.json` 中 `ten_ai_base` 依赖改为路径依赖 `/ten_ai_base`（例如 `ai_agents/agents/examples/voice-assistant/tenapp/manifest.json`）。
@@ -115,3 +196,62 @@ tman designer
 - `agora_rtc.remote_stream_id`：必须等于前端 `userId`（前端启动时随机生成并缓存）。
 - `agora_rtc.stream_id`：agent 自己的 uid（任意未占用的整数即可）。
 - `agora_rtc.subscribe_audio` / `publish_audio` / `publish_data`：保持 `true`，保证音频与数据通道都能收发。
+
+## 远程开发（ms-gpu）
+当前开发调试环境在远程服务器 `ms-gpu` 上运行，本地修改代码后需同步到远程。
+
+### 环境信息
+| 项目 | 值 |
+|------|-----|
+| 远程服务器 | ms-gpu |
+| 项目路径 | `/home/mssj/ten-framework` |
+| 容器名称 | ten_agent_dev |
+| 推理服务 | http://172.20.0.1:7800 (MuseTalk) |
+| WebSocket 端口 | 8765 |
+
+### 代码同步
+```bash
+rsync -avz /Users/shawn/Work/2024mingshan/project/ten-framework/ai_agents/agents/ ms-gpu:/home/mssj/ten-framework/ai_agents/agents/
+rsync -avz /Users/shawn/Work/2024mingshan/project/ten-framework/ai_agents/agents/examples/voice-assistant/tenapp/property.json ms-gpu:/home/mssj/ten-framework/ai_agents/agents/examples/voice-assistant/tenapp/
+```
+
+### 容器操作
+```bash
+ssh ms-gpu "cd /home/mssj/ten-framework/ai_agents && docker compose ps"
+ssh ms-gpu "cd /home/mssj/ten-framework/ai_agents && docker compose exec ten_agent_dev bash"
+ssh ms-gpu "cd /home/mssj/ten-framework/ai_agents && docker compose restart ten_agent_dev"
+```
+
+### 启动 voice-assistant（WebSocket 模式）
+```bash
+ssh ms-gpu "cd /home/mssj/ten-framework/ai_agents && docker compose exec ten_agent_dev bash -c 'cd /app/agents/examples/voice-assistant/tenapp && tman install'"
+ssh ms-gpu "cd /home/mssj/ten-framework/ai_agents && docker compose exec -d ten_agent_dev bash -c 'cd /app/agents/examples/voice-assistant/tenapp && tman run start > /tmp/voice_assistant.log 2>&1'"
+ssh ms-gpu "cd /home/mssj/ten-framework/ai_agents && docker compose exec ten_agent_dev bash -c 'tail -50 /tmp/voice_assistant.log'"
+ssh ms-gpu "cd /home/mssj/ten-framework/ai_agents && docker compose exec ten_agent_dev bash -c 'grep -i \"WebSocket server started\" /tmp/voice_assistant.log'"
+```
+
+### 停止服务
+```bash
+ssh ms-gpu "cd /home/mssj/ten-framework/ai_agents && docker compose exec ten_agent_dev bash -c 'pkill -9 -f tman'"
+ssh ms-gpu "cd /home/mssj/ten-framework/ai_agents && docker compose restart ten_agent_dev"
+```
+
+### voice-assistant 数据流（WebSocket 模式）
+```
+WebSocket Client (ws://0.0.0.0:8765)
+        │
+        ▼
+┌─────────────────┐
+│ websocket_server│──audio──> stt ──> main_control ──> llm
+└─────────────────┘                                     │
+        ▲                                               ▼
+        │ audio                                        tts
+        │                                               │
+        │ video          ┌─────────────────┐           │
+        └────────────────│ avatar_musetalk │<──audio───┘
+                         └─────────────────┘
+```
+
+## 额外文档
+- `ai_agents/CLAUDE.md`
+- `docs/code-of-conduct/contributing.md`
